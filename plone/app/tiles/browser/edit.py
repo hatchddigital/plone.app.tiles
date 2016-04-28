@@ -69,7 +69,7 @@ class DefaultEditForm(TileForm, form.Form):
                 '@@%s/%s' % (typeName, tileId,))
 
         dataManager = ITileDataManager(tile)
-        return AcquirableDictionary(dataManager.get()).__of__(self.context)
+        return AcquirableDictionary(self.getTileDictFromStorage(dataManager.get())).__of__(self.context)
 
     # UI
 
@@ -93,7 +93,7 @@ class DefaultEditForm(TileForm, form.Form):
             '@@%s/%s' % (typeName, self.tileId,))
 
         dataManager = ITileDataManager(tile)
-        dataManager.set(data)
+        dataManager.set(self.getTileDictForStorage(data))
 
         # Look up the URL - we need to do this after we've set the data to
         # correctly account for transient tiles

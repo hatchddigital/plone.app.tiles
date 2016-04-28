@@ -2,7 +2,7 @@
 from AccessControl import Unauthorized
 from plone.autoform.form import AutoExtensibleForm
 from plone.z3cform.interfaces import IDeferSecurityCheck
-from z3c.form.interfaces import IWidgets
+from z3c.form.interfaces import IWidgets, IDataManager
 from zope.component import getMultiAdapter
 from zope.security import checkPermission
 from zope.traversing.browser.absoluteurl import absoluteURL
@@ -97,5 +97,23 @@ class TileForm(AutoExtensibleForm):
     @property
     def schema(self):
         return self.tileType.schema
+
+    def getTileDictForStorage(self, data):
+        # Use the appropriate IDataManager for each field to store in
+        # the tiles data dict
+        storableData = {}
+        for k, v in data.items():
+            dm = getMultiAdapter((storableData, self.fields[k].field),
+                                 IDataManager)
+            dm.set(v)
+        return storableData
+
+    def getTileDictFromStorage(self, data):
+        d = {}
+        for k, v in data.items():
+            dm = getMultiAdapter((data, self.fields[k].field),
+                                 IDataManager)
+            d[k] = dm.get()
+        return d
 
     additionalSchemata = ()

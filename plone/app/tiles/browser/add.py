@@ -61,8 +61,9 @@ class DefaultAddForm(TileForm, form.Form):
         tile = self.context.restrictedTraverse(
             '@@%s/%s' % (typeName, tileId,))
 
+
         dataManager = ITileDataManager(tile)
-        dataManager.set(data)
+        dataManager.set(self.getTileDictForStorage(data))
 
         # Look up the URL - we need to do this after we've set the data to
         # correctly account for transient tiles
