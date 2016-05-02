@@ -101,17 +101,23 @@ class TileForm(AutoExtensibleForm):
     def getTileDictForStorage(self, data):
         # Use the appropriate IDataManager for each field to store in
         # the tiles data dict
+        all_fields = dict(self.fields)
+        for group in self.groups:
+            all_fields.update(group.fields)
         storableData = {}
         for k, v in data.items():
-            dm = getMultiAdapter((storableData, self.fields[k].field),
+            dm = getMultiAdapter((storableData, all_fields[k].field),
                                  IDataManager)
             dm.set(v)
         return storableData
 
     def getTileDictFromStorage(self, data):
+        all_fields = dict(self.fields)
+        for group in self.groups:
+            all_fields.update(group.fields)
         d = {}
         for k, v in data.items():
-            dm = getMultiAdapter((data, self.fields[k].field),
+            dm = getMultiAdapter((data, all_fields[k].field),
                                  IDataManager)
             d[k] = dm.get()
         return d
