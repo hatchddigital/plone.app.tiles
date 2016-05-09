@@ -6,6 +6,12 @@ from z3c.form.interfaces import IWidgets, IDataManager
 from zope.component import getMultiAdapter
 from zope.security import checkPermission
 from zope.traversing.browser.absoluteurl import absoluteURL
+from plone.uuid.interfaces import IUUID
+from plone.app.uuid.utils import uuidToObject
+from z3c.relationfield import RelationValue
+from zope.component import getUtility
+from zope.intid.interfaces import IIntIds
+
 
 try:
     from plone.app.drafts.interfaces import ICurrentDraftManagement
@@ -106,9 +112,11 @@ class TileForm(AutoExtensibleForm):
             all_fields.update(group.fields)
         storableData = {}
         for k, v in data.items():
-            dm = getMultiAdapter((storableData, all_fields[k].field),
-                                 IDataManager)
-            dm.set(v)
+            if k in all_fields:
+                if isinstance(v, list):  # eg. DataGrid
+                    v = map(TileForm.convertToRelations, v)
+                dm = getMultiAdapter((storableData, all_fields[k].field), IDataManager)
+                dm.set(v)
         return storableData
 
     def getTileDictFromStorage(self, data):
@@ -117,9 +125,37 @@ class TileForm(AutoExtensibleForm):
             all_fields.update(group.fields)
         d = {}
         for k, v in data.items():
-            dm = getMultiAdapter((data, all_fields[k].field),
-                                 IDataManager)
-            d[k] = dm.get()
+            if k in all_fields:
+                dm = getMultiAdapter((data, all_fields[k].field), IDataManager)
+                d[k] = dm.get()
+                if isinstance(d[k], list):  # eg. DataGrid
+                    d[k] = map(TileForm.convertFromRelations, v)
         return d
+
+    @staticmethod
+    def convertToRelations(value):
+        # see: https://github.com/plone/plone.app.relationfield/blob/master/plone/app/relationfield/widget.py
+        # RelationValue objects are constructed using a integer id
+        intids = getUtility(IIntIds)
+        record = {}
+        for record_key, record_value in value.items():
+            if (IUUID(record_value, None)):
+                to_id = intids.getId(record_value)
+                record_value = RelationValue(to_id)
+            record[record_key] = record_value
+        return record
+
+    @staticmethod
+    def convertFromRelations(value):
+        record = {}
+        for record_key, record_value in value.items():
+            if isinstance(record_value, RelationValue):
+                try:
+                    record[record_key] = record_value.to_object
+                except Exception as err:
+                    record[record_key] = None  # broken content
+            else:
+                record[record_key] = record_value
+        return record
 
     additionalSchemata = ()
